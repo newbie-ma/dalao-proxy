@@ -203,6 +203,7 @@ exports.parse = function parse(program) {
         "host",
         "target",
         "cache",
+        "gzip",
         "info",
     ]);
 

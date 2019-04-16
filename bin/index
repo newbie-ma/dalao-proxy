@@ -34,6 +34,7 @@ program
     .option('-H, --host <hostname>', 'dynamic add host linked to your server address')
     .option('-t, --target <proxyTarget>', 'target server to proxy')
     .option('-c, --cache', 'enable request cache')
+    .option('-g, --gzip', 'enable response gzip encoding')
     .option('-i, --info', 'enable log print')
     .action(function () {
         printWelcome(baseConfig.version);
