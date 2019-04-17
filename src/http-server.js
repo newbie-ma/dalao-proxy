@@ -31,12 +31,7 @@ function proxyRequestWrapper(config) {
     function proxyRequest(req, res) {
         const { method, url } = req;
         const { host: requestHost } = req.headers;
-        // const _request = request[method.toLowerCase()];
-        const _request = proxyUrl => request({
-            method: method.toLowerCase(),
-            uri: proxyUrl,
-            gzip: true
-        });
+        const _request = request[method.toLowerCase()];
         let matched;
 
         const reqContentType = req.headers['Content-Type'] || req.headers['content-type'];
@@ -237,21 +232,18 @@ function proxyRequestWrapper(config) {
                 }
             }
 
-            // if (
-            //     url !== '/'
-            //     && gzip
-            //     && /gzip/.test(req.headers["accept-encoding"])
-            // ) {
-            //     res.setHeader('Content-Encoding', 'gzip');
-            //     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-            //     const gzipStream = zlib.createGzip();
-            //     responseStream.pipe(gzipStream).pipe(res)
-            // }
-            // else {
-            //     responseStream.pipe(res);
-            // }
-
-            responseStream.pipe(res);            
+            if (
+                url !== '/'
+                && gzip
+                && /gzip/i.test(req.headers["accept-encoding"])
+            ) {
+                res.setHeader('Content-Encoding', 'gzip');
+                const gzipStream = zlib.createGzip();
+                responseStream.pipe(gzipStream).pipe(res)
+            }
+            else {
+                responseStream.pipe(res);
+            }
             logMatchedPath();
             return;
         }
