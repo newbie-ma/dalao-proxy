@@ -1,0 +1,26 @@
+{
+  "name": "@calvin_von/proxy-plugin-cache",
+  "version": "1.2.0-beta.10",
+  "description": "A dalao-proxy plugin for cache response",
+  "main": "index.js",
+  "keywords": [
+    "dalao-proxy",
+    "plugin",
+    "request-cache",
+    "mock"
+  ],
+  "author": "Calvin",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^2.4.2",
+    "concat-stream": "^2.0.0",
+    "mime-types": "^2.1.27",
+    "moment": "^2.26.0"
+  },
+  "scripts": {
+    "postinstall": "scripts/post-install.js"
+  },
+  "engines": {
+    "node": ">=8"
+  }
+}

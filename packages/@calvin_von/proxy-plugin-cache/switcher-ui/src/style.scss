@@ -1,0 +1,287 @@
+.plugin-cache-ui-switcher {
+    %clear-float {
+        &::after {
+            content: "";
+            clear: both;
+            display: block;
+            zoom: 1;
+        }
+    }
+
+    .switcher-handler {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+
+        $width: 30px;
+        box-sizing: border-box;
+        width: $width;
+        height: $width;
+        border-radius: $width;
+
+        background-color: rgba(0, 0, 0, 0.4);
+        border: 5px solid #e0e0e0;
+        color: white;
+
+        text-align: center;
+        font-size: 12px;
+        line-height: 20px;
+        cursor: pointer;
+        user-select: none;
+
+        transition: background-color 0.5s ease;
+
+        &:hover,
+        &.active {
+            animation: movement 1.5s ease infinite;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes movement {
+            $shadow-color: grey;
+
+            0% {
+                box-shadow: 0 0 1px $shadow-color;
+            }
+
+            50% {
+                box-shadow: 0 0 5px $shadow-color;
+            }
+
+            100% {
+                box-shadow: 0 0 1px $shadow-color;
+            }
+        }
+    }
+
+    &.ui-swicher__content {
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .ui-switcher-controller {
+            max-height: 80vh;
+            max-width: 80vw;
+            overflow-y: auto;
+
+            @extend %clear-float;
+
+            &__header {
+                @extend %clear-float;
+
+                .header-title {
+                    float: left;
+                    height: 32px;
+                    line-height: 32px;
+                    margin: 0;
+                }
+
+                .swicher-status {
+                    text-align: right;
+
+                    .status-error {
+                        color: red;
+                        font-weight: bold;
+                    }
+                }
+            }
+        }
+
+        .controller-group {
+            position: relative;
+            min-width: 350px;
+
+            padding: 10px;
+            margin: 16px 8px;
+            margin-bottom: 32px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #fbfbfb;
+
+            &__title {
+                position: absolute;
+                top: -15px;
+                left: 6px;
+                padding: 0 8px 0 4px;
+                background-color: #fff;
+            }
+
+            &__actions {
+                position: absolute;
+                top: -8px;
+                right: 6px;
+                padding: 0 8px 0 4px;
+                line-height: 15px;
+                background-color: #fff;
+
+                .action-icon {
+                    display: inline-block;
+                    margin-right: 4px;
+
+                    height: 15px;
+                    width: 15px;
+                    line-height: 10px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    border: 1px solid transparent;
+
+                    cursor: pointer;
+                    text-align: center;
+                    transition: border-color 0.4s ease;
+
+                    &:hover {
+                        border-color: #bdbdbd;
+                    }
+                }
+            }
+        }
+
+        .controller-item {
+            $item-height: 32px;
+            $label-width: 100px;
+            min-height: $item-height;
+            margin-bottom: 8px;
+
+            &__label {
+                float: left;
+
+                width: $label-width;
+                height: 100%;
+                margin-top: 6px;
+                padding-right: 8px;
+
+                text-align: right;
+            }
+
+            &__children {
+                margin-left: $label-width;
+                max-width: 70%;
+
+                height: 100%;
+                line-height: $item-height;
+
+                &.no-label {
+                    margin-left: 16px;
+                    max-width: unset;
+                    @extend %clear-float;
+                }
+
+                .ant-input-number {
+                    margin-top: 6px;
+                }
+
+                .ant-select {
+                    margin-top: 6px;
+                }
+
+                .ant-select-selection {
+                    width: 102px;
+                }
+
+                .ant-checkbox-wrapper {
+                    margin-left: 8px;
+                }
+
+                .input-with-checkbox {
+                    .ant-input {
+                        width: 85%;
+                    }
+
+                    .ant-input-number {
+                        width: 85%;
+                    }
+
+                    .ant-checkbox-wrapper {
+                        width: 0;
+                        text-align: right;
+                    }
+                }
+
+                .button-with-input {
+                    .ant-input {
+                        width: 65%;
+                        margin-left: 5%;
+                    }
+                }
+
+                // embeded gruop
+                .controller-group {
+                    min-width: unset;
+                    margin-bottom: 0;
+                    float: left;
+
+                    &__title {
+                        font-size: 14px;
+                        font-weight: 400;
+                        background-color: #fbfbfb;
+                    }
+                    &__actions {
+                        background-color: #fbfbfb;
+                    }
+
+                    .controller-item {
+                        $item-height: 24px;
+                        $embeded-label-width: 80px;
+                        min-height: $item-height;
+                        margin: 0;
+
+                        &__label {
+                            width: $embeded-label-width;
+                            height: $item-height;
+                            margin: 0;
+                        }
+
+                        &__children {
+                            width: 60%;
+                            max-width: unset;
+                            margin-left: $embeded-label-width;
+
+                            .ant-input-number {
+                                margin-top: 0;
+                            }
+
+                            .ant-select-selection {
+                                width: unset;
+                            }
+
+                            .ant-select {
+                                margin-top: 0;
+                                width: 100%;
+                            }
+                        }
+                    }
+                }
+            }
+
+            &--desc {
+                font-size: 12px;
+                color: #9e9e9e;
+                line-height: 20px;
+                margin: 0;
+            }
+
+            &--hidden-indicator {
+                text-align: center;
+                color: #bdbdbd;
+                cursor: pointer;
+                user-select: none;
+
+                &:hover {
+                    color: #1890ff;
+                }
+
+                .ant-icon-arrow .anticon {
+                    transition: all 0.5s ease;
+                }
+
+                .up {
+                    .ant-icon-arrow .anticon {
+                        transform: rotateX(180deg);
+                    }
+                }
+            }
+        }
+    }
+}

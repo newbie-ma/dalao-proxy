@@ -1,0 +1,9 @@
+.dalao-cache/
+.vscode/
+.github/
+node_modules/
+packages/
+test/
+dalao.config.js
+dalao.config.json
+dalao.config.example.json

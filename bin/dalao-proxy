@@ -1,0 +1,139 @@
+#!/usr/bin/env node
+
+const chalk = require('chalk');
+const readline = require('readline');
+const baseConfig = require('../config');
+const {
+    program,
+    Runtime,
+    ConfigParser,
+    parserEmitter,
+    commands: Commands,
+} = require('../src');
+
+const { register, watchPluginConfig } = require('../src/plugin');
+
+
+// trigger reload when file change
+parserEmitter.on('config:triggerParse:fileChange', function fileChangeHandler() {
+    program.reload(true);
+});
+
+// On config parsed
+parserEmitter.on('config:parsed', function configParsedHandler(configObject) {
+    const { config } = configObject;
+    Object.defineProperty(config, '[[parsed]]', {
+        enumerable: false,
+        value: true
+    });
+
+    watchPluginConfig(config);
+    program.context.config = config;
+
+    // trigger field `config`
+    register._trigger('config', config, value => {
+        program.context.config = value;
+
+        // support adding other new plugins during the plugin loading
+        Runtime.loadPlugins(program, value);
+
+        if (config.debug) {
+            console.log(chalk.yellow('> parsed user configuration'));
+            console.log(program.context.config);
+        }
+        Runtime.setReloading(false);
+    });
+});
+
+// Add global options
+program
+    .use(function defineGlobalOptions() {
+        program
+            .option('-C, --config <filepath>', 'use custom config file')
+    })
+
+    // Command: Start
+    .use(Commands.start)
+
+    // Command: Init
+    .use(Commands.init)
+
+    // Command: Plugin Manage
+    .use(Commands.pluginManager)
+
+    // Register commands from plugins
+    .use(Runtime.registerPlugins)
+
+    // Parse command and options
+    .parse(process.argv);
+
+if (program.context.command) {
+    // Start parsing config
+    ConfigParser.parse(program);
+
+    // Enable input
+    if (program._enableInput) {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+            prompt: chalk.green(`Type commands > `),
+            completer: cmd => {
+                const completions = register.lineCommand;
+                const hits = completions.filter(c => c.startsWith(cmd));
+                return [
+                    hits.length ? hits : completions,
+                    cmd
+                ];
+            }
+        });
+        // user runtime input listener
+        rl.on('line', runtimeCmd => {
+            setImmediate(() => rl.prompt());
+            register.emit('input', runtimeCmd);
+
+            if (program.context.commandName === 'start') {
+                if (/\b(restart|rs|reload)\b/.test(runtimeCmd)) {
+                    // trigger reload when user input
+                    console.clear();
+                    console.log(chalk.green('\n> dalao is reloading...'));
+
+                    program.reload();
+                }
+            }
+        });
+
+        rl.on('close', () => {
+            process.exit(0);
+        })
+    }
+}
+else {
+    program.help();
+}
+
+
+
+// process error caughtor
+process.on('uncaughtException', function (err) {
+    let pluginErrResult;
+    if (/(ECONNREFUSED|ECONNRESET)/i.test(err.message)) {
+        console.log(chalk.red('\n> Oops, dalao can\'t proxy to target'));
+        console.error(err.message);
+    }
+    else if (pluginErrResult = err.message.match(/Cannot\sfind\smodule\s'(.+)'/)) {
+        console.log(chalk.red(`${pluginErrResult[0]}. Please check if module '${pluginErrResult[1]}' is installed`));
+    }
+    else {
+        console.log(chalk.red('\n> 😫  Oops, dalao can\'t handle this...'));
+        console.error(err);
+        console.log(chalk.yellow(`
+    Current version: ${baseConfig.version}
+    You may need to:
+    1.Update to the latest version by \`(sudo) npm i dalao-proxy@latest -g\`.
+    2.Look up your config file, check if there is any problem(s) with installed plugins.
+    3.Create a bug issue on https://github.com/CalvinVon/dalao-proxy/issues.
+    
+    dalao is sorry about this.`)
+        );
+    }
+});

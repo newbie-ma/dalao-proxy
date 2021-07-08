@@ -1,17 +1,23 @@
+const chalk = require('chalk');
 const _ = require('lodash');
-const path = require('path');
-const fs = require('fs');
 
-const HTTP_PREFIX_REG = new RegExp(/^(https?:\/\/)/);
-const STATIC_FILE_REG = new RegExp(/(^\/$|\.[^\.]+$)/);
+const os = require('os');
+const URL = require('url').URL;
+const path = require('path');
+
+const HTTP_PROTOCOL_REG = new RegExp(/^(https?:\/\/)/);
+
+function isDebugMode() {
+    return process.env.DALAO_ENV === 'DEV';
+}
 
 function custom_assign(objValue, srcValue) {
-    return !srcValue ? objValue : srcValue;
+    return srcValue === undefined ? objValue : srcValue;
 }
 
 // make url complete with http/https
 function addHttpProtocol(urlFragment) {
-    if (!HTTP_PREFIX_REG.test(urlFragment)) {
+    if (!HTTP_PROTOCOL_REG.test(urlFragment)) {
         return 'http://' + urlFragment;
     }
     else {
@@ -21,22 +27,11 @@ function addHttpProtocol(urlFragment) {
 
 
 function splitTargetAndPath(url) {
-    const [_, target = '', path = ''] = url.match(/^((?:https?:\/\/)?(?:(?:\w+\.)+\w+|localhost)(?::\d+)?)?(.+)?/i) || [];
+    const { origin: target } = new URL(addHttpProtocol(url));
     return {
         target,
-        path
-    }
-}
-
-
-// transfer url to (cache) filename
-// /`${GET/POST}_${URI}`/
-function url2filename(method, url) {
-    return method.toUpperCase()
-        + url.split('/')
-            .join('_')
-            .replace(/\?.+/, '')
-            .replace(/#.+/, '')
+        path: url.replace(target, '')
+    };
 }
 
 
@@ -74,10 +69,13 @@ function transformPath(target, pathRewriteMap) {
             Object.keys(pathRewriteMap).forEach(path => {
                 const rewriteReg = new RegExp(path);
                 const replaceStr = pathRewriteMap[path];
-                // use string match replace first, then regexp match
+
                 result = result
-                        .replace(path, replaceStr)
-                        .replace(rewriteReg, replaceStr)
+                    .replace(rewriteReg, (...matched) => {
+                        return replaceStr.replace(/\$(\d+)/g, (_, index) => {
+                            return matched[index];
+                        });
+                    })
             });
 
             return targetTarget + result.replace(/\/\//g, '/');
@@ -96,17 +94,10 @@ function joinUrl(...urls) {
     return path.join(...urls).replace(/\\/g, '/');
 }
 
-function checkAndCreateCacheFolder (cacheDirname) {
-    const pwd = process.cwd();
-    const fullCacheDirname = path.resolve(pwd, cacheDirname);
-    if (!fs.existsSync(fullCacheDirname)) {
-        fs.mkdirSync(fullCacheDirname);
-    }
-}
-
 function fixJson(value) {
     return value
         .replace(/,\s*,/g, '')
+        .replace(/":,/g, '":')
         .replace(/([{\[])\s*,/g, function (matched) {
             return matched[1];
         })
@@ -115,27 +106,136 @@ function fixJson(value) {
         })
 }
 
-// is static file uri value
-function isStaticResouce(uri = '') {
-    return STATIC_FILE_REG.test(
-            uri
-                .replace(/\?.+/, '')
-                .replace(/#.+/, '')
-        )
-        
+
+function getIPv4Address() {
+    const interfaces = os.networkInterfaces();
+    let ipv4;
+    for (let i in interfaces) {
+        const nets = interfaces[i];
+        const [net] = nets.filter(net => {
+            if (!net.internal && net.family === 'IPv4') {
+                return true;
+            }
+            return false;
+        });
+
+        if (net) {
+            ipv4 = net.address;
+            break;
+        }
+    }
+    return ipv4;
+}
+
+function getType(value, type) {
+    if (type) {
+        if (Array.isArray(type)) {
+            return type.some(tp => Object.prototype.toString.call(value) === `[object ${tp}]`);
+        }
+        else {
+            return Object.prototype.toString.call(value) === `[object ${type}]`;
+        }
+    }
+    return Object.prototype.toString.call(value);
+}
+
+
+/**
+ * defineProxy
+ * @param {any} target proxy target
+ * @param {Object} [opt]
+ * @param {Function} [opt.setter] trigger when set value
+ * @param {Function} [opt.getter] trigger when get value
+ */
+function defineProxy(target, opt) {
+    const { setter, getter } = opt || {};
+    const isObject = getType(target, 'Object');
+    const isArray = getType(target, 'Array');
+
+    let _target;
+    if (isObject) {
+        _target = { ...target };
+    }
+    else if (isArray) {
+        _target = [...target];
+    }
+    else {
+        return target;
+    }
+
+    for (const key in _target) {
+        const value = _target[key];
+        _target[key] = defineProxy(value, opt);
+    }
+    return new Proxy(_target, {
+        set: function (t, p, v) {
+            if (typeof setter === 'function' && t[p] !== v) {
+                setter.call(this, t, p, v);
+            }
+            return Reflect.set(t, p, v);
+        },
+        get: function (t, p) {
+            if (typeof getter === 'function') {
+                getter.call(this, t, p, v);
+            }
+            return Reflect.get(t, p);
+        }
+    })
+}
+
+
+function printWelcome(version) {
+    let str = '';
+    str += ' ___    __    _      __    ___       ___   ___   ___   _     _    \n';
+    str += '| | \\  / /\\  | |    / /\\  / / \\     | |_) | |_) / / \\ \\ \\_/ \\ \\_/ \n';
+    str += '|_|_/ /_/--\\ |_|__ /_/--\\ \\_\\_/     |_|   |_| \\ \\_\\_/ /_/ \\  |_|  \n\n';
+    str += '                                             ';
+
+    console.log(chalk.yellow(str), chalk.yellow('Dalao Proxy'), chalk.green('v' + version));
+    console.log('                                            powered by CalvinVon');
+    console.log(chalk.grey('                        https://github.com/CalvinVon/dalao-proxy'));
+    console.log('\n');
+};
+
+
+/**
+ * change `uid` of the `process`
+ */
+function changeProcessUid(uid, gid, _process = process) {
+    const hasUid = _process.setgid && _process.setuid && _process.getuid;
+    if (hasUid) {
+        try {
+            _process.setuid(uid);
+            _process.setgid(gid);
+        } catch (error) {
+            console.log(chalk.yellow('Switching user failed.'));
+            throw error;
+        }
+    }
+}
+
+/**
+ * set `uid` of the `process` to root
+ */
+function setAsRootUser(_process = process) {
+    changeProcessUid(0, 0, _process);
 }
 
 
 module.exports = {
-    HTTP_PREFIX_REG,
+    printWelcome,
+    isDebugMode,
+    HTTP_PROTOCOL_REG,
     custom_assign,
     joinUrl,
     addHttpProtocol,
-    isStaticResouce,
     splitTargetAndPath,
-    url2filename,
     pathCompareFactory,
     transformPath,
-    checkAndCreateCacheFolder,
-    fixJson
+    fixJson,
+    getIPv4Address,
+    getType,
+    defineProxy,
+    changeProcessUid,
+    setAsRootUser
 }
