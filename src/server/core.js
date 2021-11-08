@@ -26,12 +26,13 @@ let plugins = [];
 /**
  * Calling single plugin instance method (not middleware defined method)
  * @private
- * @param {Plugin} plugin
- * @param {String} method method name
- * @param {Object} context
+ * @param {import('../plugin').Plugin} plugin
+ * @param {string} method method name
+ * @param {import('../context')} context
  * @returns {Promise}
  */
 function _invokePluginMiddleware(plugin, method, context) {
+    console.log(chalk.yellow(`[DEV]      Start run ${method} for [${plugin.name}]`));
     return new Promise((resolve, reject) => {
         if (!plugin) return resolve();
         const targetMethod = plugin[method];
@@ -47,6 +48,7 @@ function _invokePluginMiddleware(plugin, method, context) {
                 else {
                     resolve();
                 }
+                console.log(chalk.yellow(`[DEV]      Run lifecycle [${hookName}] for [${plugin.name}] DONE.`));
             });
         }
         else {
@@ -63,6 +65,9 @@ function _invokePluginMiddleware(plugin, method, context) {
  * @param {Function} next
  */
 function _invokeAllPluginsMiddlewares(hookName, context, next) {
+    if (context.config.debug) {
+        console.log(chalk.yellow(`[DEV] Start run lifecycle [${hookName}].`));
+    }
     if (!next) {
         plugins.forEach(plugin => {
             return _invokePluginMiddleware(plugin, hookName, context);
@@ -95,6 +100,9 @@ function _invokeAllPluginsMiddlewares(hookName, context, next) {
             else {
                 console.error(hookName, ctx)
             }
+        })
+        .finally(() => {
+            console.log(chalk.yellow(`[DEV] Run lifecycle [${hookName}] DONE.`));
         })
 }
 

@@ -349,19 +349,10 @@ class Plugin {
             resolvedPaths.packagejsonPath = path.resolve(buildInPluginPath, PATH_PACKAGE);
         }
         else {
-            if (isDebugMode()) {
-                const devPath = path.resolve(__dirname, '../../packages/', pluginName);
-                resolvedPaths.indexPath = path.resolve(devPath, PATH_INDEX);
-                resolvedPaths.configurePath = path.resolve(devPath, PATH_CONFIGURE);
-                resolvedPaths.commanderPath = path.resolve(devPath, PATH_COMMANDER);
-                resolvedPaths.packagejsonPath = path.resolve(devPath, PATH_PACKAGE);
-            }
-            else {
-                resolvedPaths.indexPath = pluginName;
-                resolvedPaths.configurePath = path.join(pluginName, PATH_CONFIGURE);
-                resolvedPaths.commanderPath = path.join(pluginName, PATH_COMMANDER);
-                resolvedPaths.packagejsonPath = path.join(pluginName, PATH_PACKAGE);
-            }
+            resolvedPaths.indexPath = pluginName;
+            resolvedPaths.configurePath = path.join(pluginName, PATH_CONFIGURE);
+            resolvedPaths.commanderPath = path.join(pluginName, PATH_COMMANDER);
+            resolvedPaths.packagejsonPath = path.join(pluginName, PATH_PACKAGE);
         }
         return resolvedPaths;
     }
