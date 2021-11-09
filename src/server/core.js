@@ -32,7 +32,9 @@ let plugins = [];
  * @returns {Promise}
  */
 function _invokePluginMiddleware(plugin, method, context) {
-    console.log(chalk.yellow(`[DEV]      Start run ${method} for [${plugin.name}]`));
+    if (context.config.debug) {
+        console.log(chalk.yellow(`[DEV]      Start run ${method} for [${plugin.name}]`));
+    }
     return new Promise((resolve, reject) => {
         if (!plugin) return resolve();
         const targetMethod = plugin[method];
@@ -48,7 +50,10 @@ function _invokePluginMiddleware(plugin, method, context) {
                 else {
                     resolve();
                 }
-                console.log(chalk.yellow(`[DEV]      Run lifecycle [${hookName}] for [${plugin.name}] DONE.`));
+
+                if (context.config.debug) {
+                    console.log(chalk.yellow(`[DEV]      Run lifecycle [${hookName}] for [${plugin.name}] DONE.`));
+                }
             });
         }
         else {
@@ -102,7 +107,9 @@ function _invokeAllPluginsMiddlewares(hookName, context, next) {
             }
         })
         .finally(() => {
-            console.log(chalk.yellow(`[DEV] Run lifecycle [${hookName}] DONE.`));
+            if (context.config.debug) {
+                console.log(chalk.yellow(`[DEV] Run lifecycle [${hookName}] DONE.`));
+            }
         })
 }
 
