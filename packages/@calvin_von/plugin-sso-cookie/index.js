@@ -1,16 +1,33 @@
 const SSO = require('./content/sso');
 const Cookie = require('./content/cookie');
 
-let lock;
-let lockPending = Promise.resolve();
+let firstRequest;
+let unlockFollowingReqs;
+let followingReqsPending;
+const lockFollowingReqs = () => {
+    followingReqsPending = new Promise(resolve => {
+        unlockFollowingReqs = () => setTimeout(() => {
+            resolve();
+        }, 1000);
+    });
+}
+
 
 function beforeCreate() {
+    firstRequest = true;
+    lockFollowingReqs();
     // setLocker(SSO.authSSO);
 }
 function onRequest(context, next) {
-    waitLocker(() => next(null));
-    // only allow first request pass lock
-    lock = true;
+    if (firstRequest) {
+        firstRequest = false;
+        next(null);
+    }
+    else {
+        followingReqsPending.then(() => {
+            next(null);
+        });
+    }
 }
 
 function onProxySetup(context) {
@@ -24,12 +41,18 @@ function onProxySetup(context) {
     }
 }
 
-function onProxyRespond(context, next) {
-    const res = context.proxy.data.response.data;
-    if (res.code === '300' || res.msg === '登录信息失效') {
-        setLocker(SSO.authSSO);
-        console.warn('[plugin-sso-cookie] login failed status detected, start to refresh cookies');
+async function onProxyRespond(context, next) {
+    try {
+        const res = context.proxy.data.response.data;
+        if (res.code === '300' || res.msg === '登录信息失效') {
+            console.warn('[plugin-sso-cookie] login failed status detected, start to refresh cookies');
+            lockFollowingReqs();
+            await SSO.authSSO();
+        }
+    } catch (error) {
+        console.error(error);
     }
+    unlockFollowingReqs();
     next(null);
 }
 
@@ -40,28 +63,3 @@ module.exports = {
     onProxySetup,
     onProxyRespond,
 };
-
-
-
-function waitLocker(fn) {
-    if (lock) {
-        console.log('locked, waiting!');
-        lockPending.then(() => {
-            console.log('unlocked, continue!');
-            fn();
-        })
-    }
-    else {
-        fn();
-    }
-}
-
-function setLocker(fn) {
-    lock = true;
-    console.log('set locker');
-    lockPending = new Promise(async (resolve) => {
-        await fn();
-        lock = false;
-        resolve();
-    });
-}

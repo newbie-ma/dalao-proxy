@@ -31,7 +31,7 @@ request.interceptors.response.use(
     return Promise.reject(res);
   },
   err => {
-    log(`${res.config.method} ${res.config.url} ${res.status}`);
+    log(`${err.config.method} ${err.config.url} ${err.status}`);
     return Promise.reject(err.data);
   }
 );
@@ -58,8 +58,7 @@ SSOAuth.authSSO = async () => {
 
   } catch (error) {
     log('SSO auth failed');
-    log(error);
-    process.exit(1);
+    throw error;
   }
 }
 
