@@ -5,46 +5,63 @@ let lock;
 let lockPending = Promise.resolve();
 
 function beforeCreate() {
-    // SSO.authSSO();
+    // setLocker(SSO.authSSO);
 }
 function onRequest(context, next) {
-    next(null);
+    waitLocker(() => next(null));
+    // only allow first request pass lock
+    lock = true;
 }
-function onRouteMatch(context, next) {
-    next(null);
-}
-function beforeProxy(context, next) {
-    next(null);
-}
+
 function onProxySetup(context) {
-    const { config, proxy } = context;
+    const { proxy } = context;
     const { request } = proxy;
     try {
         const cookies = Cookie.get();
         request.setHeader('cookie', cookies);
     } catch (error) {
-        SSO.authSSO();
+        console.warn('[plugin-sso-cookie] no cookies found, hold page and try to send another request.');
     }
 }
+
 function onProxyRespond(context, next) {
+    const res = context.proxy.data.response.data;
+    if (res.code === '300' || res.msg === '登录信息失效') {
+        setLocker(SSO.authSSO);
+        console.warn('[plugin-sso-cookie] login failed status detected, start to refresh cookies');
+    }
     next(null);
 }
-function afterProxy(context) { }
-function onPipeRequest(context, next) {
-    next(null, context.chunk);
-}
-function onPipeResponse(context, next) {
-    next(null, context.chunk);
-}
+
 
 module.exports = {
     beforeCreate,
     onRequest,
-    onRouteMatch,
-    beforeProxy,
     onProxySetup,
     onProxyRespond,
-    afterProxy,
-    onPipeRequest,
-    onPipeResponse
 };
+
+
+
+function waitLocker(fn) {
+    if (lock) {
+        console.log('locked, waiting!');
+        lockPending.then(() => {
+            console.log('unlocked, continue!');
+            fn();
+        })
+    }
+    else {
+        fn();
+    }
+}
+
+function setLocker(fn) {
+    lock = true;
+    console.log('set locker');
+    lockPending = new Promise(async (resolve) => {
+        await fn();
+        lock = false;
+        resolve();
+    });
+}

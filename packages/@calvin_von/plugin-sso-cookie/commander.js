@@ -1,6 +1,7 @@
 const SSO = require('./content/sso');
 
 module.exports = function (program) {
+  program.enableCollectProxyData();
   program
     .command('cookie')
     .description('refresh SSO cookie immediately')
